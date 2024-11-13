@@ -248,7 +248,8 @@ proc cmdBench(conf: DbConf, cfg: RuntimeConfig) =
       seq[bellatrix.TrustedSignedBeaconBlock],
       seq[capella.TrustedSignedBeaconBlock],
       seq[deneb.TrustedSignedBeaconBlock],
-      seq[electra.TrustedSignedBeaconBlock])
+      seq[electra.TrustedSignedBeaconBlock],
+      seq[fulu.TrustedSignedBeaconBlock])
 
   echo "Loaded head slot ", dag.head.slot,
     " selected ", blockRefs.len, " blocks"
@@ -277,6 +278,9 @@ proc cmdBench(conf: DbConf, cfg: RuntimeConfig) =
       of ConsensusFork.Electra:
         blocks[5].add dag.db.getBlock(
           blck.root, electra.TrustedSignedBeaconBlock).get()
+      of ConsensusFork.Fulu:
+        blocks[6].add dag.db.getBlock(
+          blck.root, fulu.TrustedSignedBeaconBlock).get()
 
   let stateData = newClone(dag.headState)
 
@@ -289,7 +293,8 @@ proc cmdBench(conf: DbConf, cfg: RuntimeConfig) =
       (ref bellatrix.HashedBeaconState)(),
       (ref capella.HashedBeaconState)(),
       (ref deneb.HashedBeaconState)(),
-      (ref electra.HashedBeaconState)())
+      (ref electra.HashedBeaconState)(),
+      (ref fulu.HashedBeaconState)())
 
   withTimer(timers[tLoadState]):
     doAssert dag.updateState(
@@ -353,6 +358,9 @@ proc cmdBench(conf: DbConf, cfg: RuntimeConfig) =
               of ConsensusFork.Electra:
                 doAssert dbBenchmark.getState(
                   forkyState.root, loadedState[5][].data, noRollback)
+              of ConsensusFork.Fulu:
+                doAssert dbBenchmark.getState(
+                  forkyState.root, loadedState[6][].data, noRollback)
 
             if forkyState.data.slot.epoch mod 16 == 0:
               let loadedRoot = case consensusFork
@@ -362,6 +370,7 @@ proc cmdBench(conf: DbConf, cfg: RuntimeConfig) =
                 of ConsensusFork.Capella:   hash_tree_root(loadedState[3][].data)
                 of ConsensusFork.Deneb:     hash_tree_root(loadedState[4][].data)
                 of ConsensusFork.Electra:   hash_tree_root(loadedState[5][].data)
+                of ConsensusFork.Fulu:      hash_tree_root(loadedState[6][].data)
               doAssert hash_tree_root(forkyState.data) == loadedRoot
 
   processBlocks(blocks[0])
@@ -370,6 +379,7 @@ proc cmdBench(conf: DbConf, cfg: RuntimeConfig) =
   processBlocks(blocks[3])
   processBlocks(blocks[4])
   processBlocks(blocks[5])
+  processBlocks(blocks[6])
 
   printTimers(false, timers)
 
@@ -384,6 +394,7 @@ proc cmdDumpState(conf: DbConf) =
     capellaState   = (ref capella.HashedBeaconState)()
     denebState     = (ref deneb.HashedBeaconState)()
     electraState   = (ref electra.HashedBeaconState)()
+    fuluState      = (ref fulu.HashedBeaconState)()
 
   for stateRoot in conf.stateRoot:
     if shouldShutDown: quit QuitSuccess
@@ -403,6 +414,7 @@ proc cmdDumpState(conf: DbConf) =
     doit(capellaState[])
     doit(denebState[])
     doit(electraState[])
+    doit(fuluState[])
 
     echo "Couldn't load ", stateRoot
 

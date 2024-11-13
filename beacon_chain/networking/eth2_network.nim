@@ -855,7 +855,8 @@ template gossipMaxSize(T: untyped): uint32 =
     when isFixedSize(T):
       fixedPortionSize(T).uint32
     elif T is bellatrix.SignedBeaconBlock or T is capella.SignedBeaconBlock or
-         T is deneb.SignedBeaconBlock or T is electra.SignedBeaconBlock:
+         T is deneb.SignedBeaconBlock or T is electra.SignedBeaconBlock or
+         T is fulu.SignedBeaconBlock:
       GOSSIP_MAX_SIZE
     # TODO https://github.com/status-im/nim-ssz-serialization/issues/20 for
     # Attestation, AttesterSlashing, and SignedAggregateAndProof, which all
@@ -2680,6 +2681,12 @@ proc broadcastBeaconBlock*(
     node: Eth2Node, blck: electra.SignedBeaconBlock):
     Future[SendResult] {.async: (raises: [CancelledError], raw: true).} =
   let topic = getBeaconBlocksTopic(node.forkDigests.electra)
+  node.broadcast(topic, blck)
+
+proc broadcastBeaconBlock*(
+    node: Eth2Node, blck: fulu.SignedBeaconBlock):
+    Future[SendResult] {.async: (raises: [CancelledError], raw: true).} =
+  let topic = getBeaconBlocksTopic(node.forkDigests.fulu)
   node.broadcast(topic, blck)
 
 proc broadcastBlobSidecar*(

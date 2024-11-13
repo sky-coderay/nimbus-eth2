@@ -89,6 +89,8 @@ func getBlobForkCode(fork: ConsensusFork): uint64 =
     uint64(MaxForksCount)
   of ConsensusFork.Electra:
     uint64(MaxForksCount) + uint64(fork) - uint64(ConsensusFork.Deneb)
+  of ConsensusFork.Fulu:
+    uint64(MaxForksCount) + uint64(fork) - uint64(ConsensusFork.Electra)
   of ConsensusFork.Phase0 .. ConsensusFork.Capella:
     raiseAssert "Blobs are not supported for the fork"
 

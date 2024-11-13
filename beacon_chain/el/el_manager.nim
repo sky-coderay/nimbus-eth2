@@ -597,6 +597,9 @@ template EngineApiResponseType*(T: type deneb.ExecutionPayloadForSigning): type 
 template EngineApiResponseType*(T: type electra.ExecutionPayloadForSigning): type =
   engine_api.GetPayloadV4Response
 
+template EngineApiResponseType*(T: type fulu.ExecutionPayloadForSigning): type =
+  engine_api.GetPayloadV4Response
+
 template toEngineWithdrawals*(withdrawals: seq[capella.Withdrawal]): seq[WithdrawalV1] =
   mapIt(withdrawals, toEngineWithdrawal(it))
 
@@ -719,8 +722,12 @@ proc getPayload*(
       requests.filterIt(not(it.finished())).mapIt(it.cancelAndWait())
     await noCancel allFutures(pending)
 
-    if bestPayloadIdx.isSome():
-      return ok(requests[bestPayloadIdx.get()].value().asConsensusType)
+    when PayloadType.kind == ConsensusFork.Fulu:
+      if bestPayloadIdx.isSome():
+        return ok(requests[bestPayloadIdx.get()].value().asConsensusTypeFulu)
+    else:
+      if bestPayloadIdx.isSome():
+        return ok(requests[bestPayloadIdx.get()].value().asConsensusType)
 
     if timeoutExceeded:
       break
@@ -986,7 +993,7 @@ proc sendNewPayload*(
       let
         requests = m.elConnections.mapIt:
           let req =
-            when typeof(blck).kind == ConsensusFork.Electra:
+            when typeof(blck).kind >= ConsensusFork.Electra:
               # https://github.com/ethereum/execution-apis/blob/4140e528360fea53c34a766d86a000c6c039100e/src/engine/prague.md#engine_newpayloadv4
               let versioned_hashes = mapIt(
                 blck.body.blob_kzg_commitments,

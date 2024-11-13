@@ -177,6 +177,8 @@ func getVanityLogs(stdoutKind: StdoutLogKind): VanityLogs =
 
 func getVanityMascot(consensusFork: ConsensusFork): string =
   case consensusFork
+  of ConsensusFork.Fulu:
+    "not decided yet?"
   of ConsensusFork.Electra:
     "🦒"
   of ConsensusFork.Deneb:
@@ -716,7 +718,7 @@ proc init*(T: type BeaconNode,
       exitQueue: newAsyncEventQueue[SignedVoluntaryExit](),
       blsToExecQueue: newAsyncEventQueue[SignedBLSToExecutionChange](),
       propSlashQueue: newAsyncEventQueue[ProposerSlashing](),
-      attSlashQueue: newAsyncEventQueue[AttesterSlashing](),
+      attSlashQueue: newAsyncEventQueue[phase0.AttesterSlashing](),
       blobSidecarQueue: newAsyncEventQueue[BlobSidecarInfoObject](),
       finalQueue: newAsyncEventQueue[FinalizationInfoObject](),
       reorgQueue: newAsyncEventQueue[ReorgInfoObject](),
@@ -1085,7 +1087,8 @@ func forkDigests(node: BeaconNode): auto =
     node.dag.forkDigests.bellatrix,
     node.dag.forkDigests.capella,
     node.dag.forkDigests.deneb,
-    node.dag.forkDigests.electra]
+    node.dag.forkDigests.electra,
+    node.dag.forkDigests.fulu]
   forkDigestsArray
 
 # https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.5/specs/phase0/p2p-interface.md#attestation-subnet-subscription
@@ -1277,6 +1280,10 @@ proc addElectraMessageHandlers(
     node: BeaconNode, forkDigest: ForkDigest, slot: Slot) =
   node.addDenebMessageHandlers(forkDigest, slot)
 
+proc addFuluMessageHandlers(
+    node: BeaconNode, forkDigest: ForkDigest, slot: Slot) =
+  node.addElectraMessageHandlers(forkDigest, slot)
+
 proc removeAltairMessageHandlers(node: BeaconNode, forkDigest: ForkDigest) =
   node.removePhase0MessageHandlers(forkDigest)
 
@@ -1299,6 +1306,9 @@ proc removeDenebMessageHandlers(node: BeaconNode, forkDigest: ForkDigest) =
 
 proc removeElectraMessageHandlers(node: BeaconNode, forkDigest: ForkDigest) =
   node.removeDenebMessageHandlers(forkDigest)
+
+proc removeFuluMessageHandlers(node: BeaconNode, forkDigest: ForkDigest) =
+  node.removeElectraMessageHandlers(forkDigest)
 
 proc updateSyncCommitteeTopics(node: BeaconNode, slot: Slot) =
   template lastSyncUpdate: untyped =
@@ -1450,7 +1460,7 @@ proc updateGossipStatus(node: BeaconNode, slot: Slot) {.async.} =
     TOPIC_SUBSCRIBE_THRESHOLD_SLOTS = 64
     HYSTERESIS_BUFFER = 16
 
-  static: doAssert high(ConsensusFork) == ConsensusFork.Electra
+  static: doAssert high(ConsensusFork) == ConsensusFork.Fulu
 
   let
     head = node.dag.head
@@ -1529,7 +1539,8 @@ proc updateGossipStatus(node: BeaconNode, slot: Slot) {.async.} =
     removeAltairMessageHandlers,  # bellatrix (altair handlers, different forkDigest)
     removeCapellaMessageHandlers,
     removeDenebMessageHandlers,
-    removeElectraMessageHandlers
+    removeElectraMessageHandlers,
+    removeFuluMessageHandlers
   ]
 
   for gossipFork in oldGossipForks:
@@ -1541,7 +1552,8 @@ proc updateGossipStatus(node: BeaconNode, slot: Slot) {.async.} =
     addAltairMessageHandlers,  # bellatrix (altair handlers, different forkDigest)
     addCapellaMessageHandlers,
     addDenebMessageHandlers,
-    addElectraMessageHandlers
+    addElectraMessageHandlers,
+    addFuluMessageHandlers
   ]
 
   for gossipFork in newGossipForks:

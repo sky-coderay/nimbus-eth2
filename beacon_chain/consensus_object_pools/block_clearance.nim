@@ -455,7 +455,9 @@ proc addBackfillBlock*(
   ok()
 
 template BlockAdded(kind: static ConsensusFork): untyped =
-  when kind == ConsensusFork.Electra:
+  when kind == ConsensusFork.Fulu:
+    OnFuluBlockAdded
+  elif kind == ConsensusFork.Electra:
     OnElectraBlockAdded
   elif kind == ConsensusFork.Deneb:
     OnDenebBlockAdded

@@ -2511,6 +2511,8 @@ proc publishBlockV2*(
           publishBlockV2(it, some(broadcast_validation), data.denebData)
         of ConsensusFork.Electra:
           publishBlockV2(it, some(broadcast_validation), data.electraData)
+        of ConsensusFork.Fulu:
+          publishBlockV2(it, some(broadcast_validation), data.fuluData)
       do:
         if apiResponse.isErr():
           handleCommunicationError()
@@ -2562,6 +2564,8 @@ proc publishBlockV2*(
         publishBlockV2(it, some(broadcast_validation), data.denebData)
       of ConsensusFork.Electra:
         publishBlockV2(it, some(broadcast_validation), data.electraData)
+      of ConsensusFork.Fulu:
+        publishBlockV2(it, some(broadcast_validation), data.fuluData)
 
     do:
       if apiResponse.isErr():
@@ -2627,6 +2631,8 @@ proc publishBlock*(
           publishBlock(it, data.denebData)
         of ConsensusFork.Electra:
           publishBlock(it, data.electraData)
+        of ConsensusFork.Fulu:
+          publishBlock(it, data.fuluData)
       do:
         if apiResponse.isErr():
           handleCommunicationError()
@@ -2675,6 +2681,8 @@ proc publishBlock*(
         publishBlock(it, data.denebData)
       of ConsensusFork.Electra:
         publishBlock(it, data.electraData)
+      of ConsensusFork.Fulu:
+        publishBlock(it, data.fuluData)
 
     do:
       if apiResponse.isErr():
@@ -2744,6 +2752,9 @@ proc publishBlindedBlockV2*(
         of ConsensusFork.Electra:
           publishBlindedBlockV2(it, some(broadcast_validation),
             data.electraData)
+        of ConsensusFork.Fulu:
+          publishBlindedBlockV2(it, some(broadcast_validation),
+            data.fuluData)
       do:
         if apiResponse.isErr():
           handleCommunicationError()
@@ -2800,6 +2811,9 @@ proc publishBlindedBlockV2*(
       of ConsensusFork.Electra:
         publishBlindedBlockV2(it, some(broadcast_validation),
           data.electraData)
+      of ConsensusFork.Fulu:
+        publishBlindedBlockV2(it, some(broadcast_validation),
+          data.fuluData)
     do:
       if apiResponse.isErr():
         handleCommunicationError()
@@ -2863,6 +2877,8 @@ proc publishBlindedBlock*(
           publishBlindedBlock(it, data.denebData)
         of ConsensusFork.Electra:
           publishBlindedBlock(it, data.electraData)
+        of ConsensusFork.Fulu:
+          publishBlindedBlock(it, data.fuluData)
       do:
         if apiResponse.isErr():
           handleCommunicationError()
@@ -2910,6 +2926,8 @@ proc publishBlindedBlock*(
         publishBlindedBlock(it, data.denebData)
       of ConsensusFork.Electra:
         publishBlindedBlock(it, data.electraData)
+      of ConsensusFork.Fulu:
+        publishBlindedBlock(it, data.fuluData)
     do:
       if apiResponse.isErr():
         handleCommunicationError()

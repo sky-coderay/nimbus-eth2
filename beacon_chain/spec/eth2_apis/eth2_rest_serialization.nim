@@ -70,6 +70,7 @@ RestJson.useDefaultSerializationFor(
   EventBeaconBlockObject,
   ExecutionRequests,
   Fork,
+  FuluSignedBlockContents,
   GetBlockAttestationsResponse,
   GetBlockHeaderResponse,
   GetBlockHeadersResponse,
@@ -263,6 +264,19 @@ RestJson.useDefaultSerializationFor(
   electra_mev.ExecutionPayloadAndBlobsBundle,
   electra_mev.SignedBlindedBeaconBlock,
   electra_mev.SignedBuilderBid,
+  fulu.BeaconBlock,
+  fulu.BeaconBlockBody,
+  fulu.BeaconState,
+  fulu.BlockContents,
+  fulu.ExecutionPayload,
+  fulu.ExecutionPayloadHeader,
+  fulu.SignedBeaconBlock,
+  fulu_mev.BlindedBeaconBlock,
+  fulu_mev.BlindedBeaconBlockBody,
+  fulu_mev.BuilderBid,
+  fulu_mev.ExecutionPayloadAndBlobsBundle,
+  fulu_mev.SignedBlindedBeaconBlock,
+  fulu_mev.SignedBuilderBid,
   phase0.AggregateAndProof,
   phase0.Attestation,
   phase0.AttesterSlashing,
@@ -343,6 +357,7 @@ type
     capella_mev.SignedBlindedBeaconBlock |
     deneb_mev.SignedBlindedBeaconBlock |
     electra_mev.SignedBlindedBeaconBlock |
+    fulu_mev.SignedBlindedBeaconBlock |
     phase0.AttesterSlashing |
     SignedValidatorRegistrationV1 |
     SignedVoluntaryExit |
@@ -357,6 +372,7 @@ type
     phase0.SignedBeaconBlock |
     DenebSignedBlockContents |
     ElectraSignedBlockContents |
+    FuluSignedBlockContents |
     ForkedMaybeBlindedBeaconBlock
 
   EncodeArrays* =
@@ -416,7 +432,9 @@ type
   RestBlockTypes* = phase0.BeaconBlock | altair.BeaconBlock |
                     bellatrix.BeaconBlock | capella.BeaconBlock |
                     deneb.BlockContents | deneb_mev.BlindedBeaconBlock |
-                    electra.BlockContents | electra_mev.BlindedBeaconBlock
+                    electra.BlockContents | fulu.BlockContents |
+                    electra_mev.BlindedBeaconBlock |
+                    fulu_mev.BlindedBeaconBlock
 
 func readStrictHexChar(c: char, radix: static[uint8]): Result[int8, cstring] =
   ## Converts an hex char to an int
@@ -1545,6 +1563,18 @@ proc readValue*[BlockType: ForkedBlindedBeaconBlock](
                                     exc.formatMsg("BlindedBlock") & "]")
     value = ForkedBlindedBeaconBlock(kind: ConsensusFork.Electra,
                                      electraData: res)
+  of ConsensusFork.Fulu:
+    let res =
+      try:
+        RestJson.decode(string(data.get()),
+                        fulu_mev.BlindedBeaconBlock,
+                        requireAllFields = true,
+                        allowUnknownFields = true)
+      except SerializationError as exc:
+        reader.raiseUnexpectedValue("Incorrect electra block format, [" &
+                                    exc.formatMsg("BlindedBlock") & "]")
+    value = ForkedBlindedBeaconBlock(kind: ConsensusFork.Fulu,
+                                     fuluData: res)
 
 proc readValue*[BlockType: Web3SignerForkedBeaconBlock](
     reader: var JsonReader[RestJson],
@@ -1680,6 +1710,17 @@ proc readValue*(reader: var JsonReader[RestJson],
         reader.raiseUnexpectedValue("Incorrect electra block format")
 
     value = ForkedSignedBeaconBlock.init(res)
+  of ConsensusFork.Fulu:
+    let res =
+      try:
+        RestJson.decode(string(data.get()),
+                        fulu.SignedBeaconBlock,
+                        requireAllFields = true,
+                        allowUnknownFields = true)
+      except SerializationError:
+        reader.raiseUnexpectedValue("Incorrect fulu block format")
+
+    value = ForkedSignedBeaconBlock.init(res)
   withBlck(value):
     forkyBlck.root = hash_tree_root(forkyBlck.message)
 
@@ -1701,6 +1742,8 @@ proc writeValue*(
     writer.writeField("data", value.denebData)
   of ConsensusFork.Electra:
     writer.writeField("data", value.electraData)
+  of ConsensusFork.Fulu:
+    writer.writeField("data", value.fuluData)
   writer.endRecord()
 
 # ForkedHashedBeaconState is used where a `ForkedBeaconState` normally would
@@ -1809,6 +1852,16 @@ proc readValue*(reader: var JsonReader[RestJson],
     except SerializationError:
       reader.raiseUnexpectedValue("Incorrect electra beacon state format")
     toValue(electraData)
+  of ConsensusFork.Fulu:
+    try:
+      tmp[].fuluData.data = RestJson.decode(
+        string(data.get()),
+        fulu.BeaconState,
+        requireAllFields = true,
+        allowUnknownFields = true)
+    except SerializationError:
+      reader.raiseUnexpectedValue("Incorrect fulu beacon state format")
+    toValue(fuluData)
 
 proc writeValue*(
     writer: var JsonWriter[RestJson], value: ForkedHashedBeaconState
@@ -1828,6 +1881,8 @@ proc writeValue*(
     writer.writeField("data", value.denebData.data)
   of ConsensusFork.Electra:
     writer.writeField("data", value.electraData.data)
+  of ConsensusFork.Fulu:
+    writer.writeField("data", value.fuluData.data)
   writer.endRecord()
 
 ## SomeForkedLightClientObject
@@ -2968,6 +3023,17 @@ proc decodeBody*(
           return err(RestErrorMessage.init(Http400, UnexpectedDecodeError,
                                            [version, $exc.msg]))
       ok(RestPublishedSignedBeaconBlock(ForkedSignedBeaconBlock.init(blck)))
+    of ConsensusFork.Fulu:
+      let blck =
+        try:
+          SSZ.decode(body.data, fulu.SignedBeaconBlock)
+        except SerializationError as exc:
+          return err(RestErrorMessage.init(Http400, UnableDecodeError,
+                                           [version, exc.formatMsg("<data>")]))
+        except CatchableError as exc:
+          return err(RestErrorMessage.init(Http400, UnexpectedDecodeError,
+                                           [version, $exc.msg]))
+      ok(RestPublishedSignedBeaconBlock(ForkedSignedBeaconBlock.init(blck)))
   else:
     err(RestErrorMessage.init(Http415, "Invalid content type",
                               [version, $body.contentType]))
@@ -3033,6 +3099,23 @@ proc decodeBody*(
           res.signed_block.root = hash_tree_root(res.signed_block.message)
           RestPublishedSignedBlockContents(
             kind: ConsensusFork.Electra, electraData: res)
+        except SerializationError as exc:
+          debug "Failed to decode JSON data",
+                err = exc.formatMsg("<data>"),
+                data = string.fromBytes(body.data)
+          return err(RestErrorMessage.init(Http400, UnableDecodeError,
+                                           [version, exc.formatMsg("<data>")]))
+        except CatchableError as exc:
+          return err(RestErrorMessage.init(Http400, UnexpectedDecodeError,
+                                           [version, $exc.msg]))
+      of ConsensusFork.Fulu:
+        try:
+          var res = RestJson.decode(body.data, FuluSignedBlockContents,
+                                    requireAllFields = true,
+                                    allowUnknownFields = true)
+          res.signed_block.root = hash_tree_root(res.signed_block.message)
+          RestPublishedSignedBlockContents(
+            kind: ConsensusFork.Fulu, fuluData: res)
         except SerializationError as exc:
           debug "Failed to decode JSON data",
                 err = exc.formatMsg("<data>"),
@@ -3133,6 +3216,20 @@ proc decodeBody*(
                                            [version, $exc.msg]))
       ok(RestPublishedSignedBlockContents(
         kind: ConsensusFork.Electra, electraData: blckContents))
+    of ConsensusFork.Fulu:
+      let blckContents =
+        try:
+          var res = SSZ.decode(body.data, FuluSignedBlockContents)
+          res.signed_block.root = hash_tree_root(res.signed_block.message)
+          res
+        except SerializationError as exc:
+          return err(RestErrorMessage.init(Http400, UnableDecodeError,
+                                           [version, exc.formatMsg("<data>")]))
+        except CatchableError as exc:
+          return err(RestErrorMessage.init(Http400, UnexpectedDecodeError,
+                                           [version, $exc.msg]))
+      ok(RestPublishedSignedBlockContents(
+        kind: ConsensusFork.Fulu, fuluData: blckContents))
   else:
     err(RestErrorMessage.init(Http415, "Invalid content type",
                               [version, $body.contentType]))
