@@ -224,7 +224,7 @@ func getBlockIdAtSlot*(dag: ChainDAGRef, slot: Slot): Opt[BlockSlotId] =
   template tryWithState(state: ForkedHashedBeaconState) =
     block:
       withState(state):
-        # State must be a descendent of the finalized chain to be viable
+        # State must be a descendant of the finalized chain to be viable
         let finBsi = forkyState.getBlockIdAtSlot(dag.finalizedHead.slot)
         if finBsi.isSome and  # DAG finalized bid slot wrong if CP not @ epoch
             finBsi.unsafeGet.bid.root == dag.finalizedHead.blck.bid.root:
