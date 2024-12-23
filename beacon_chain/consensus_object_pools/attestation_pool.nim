@@ -37,7 +37,7 @@ type
     proc(data: electra.Attestation) {.gcsafe, raises: [].}
 
   Validation[CVBType] = object
-    ## Validations collect a set of signatures for a distict attestation - in
+    ## Validations collect a set of signatures for a distinct attestation - in
     ## eth2, a single bit is used to keep track of which signatures have been
     ## added to the aggregate meaning that only non-overlapping aggregates may
     ## be further combined.
@@ -1197,7 +1197,7 @@ proc selectOptimisticHead*(
 proc prune*(pool: var AttestationPool) =
   if (let v = pool.forkChoice.prune(); v.isErr):
     # If pruning fails, it's likely the result of a bug - this shouldn't happen
-    # but we'll keep running hoping that the fork chocie will recover eventually
+    # but we'll keep running hoping that the fork choice will recover eventually
     error "Couldn't prune fork choice, bug?", err = v.error()
 
 func validatorSeenAtEpoch*(pool: AttestationPool, epoch: Epoch,
